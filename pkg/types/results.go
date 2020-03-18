@@ -3,7 +3,7 @@ package types
 type Issue int8
 
 const (
-	OK Issue = iota
+	OK Issue = iota + 1
 	System
 	User
 )
@@ -26,6 +26,20 @@ func (r *Result) WithMessage(msg string) *Result {
 		Tested:    r.Tested,
 		Msg:       msg,
 	}
+}
+
+func CheckUserIssue(ok bool, tested string) *Result {
+	if ok {
+		return NoIssue(tested)
+	}
+	return UserIssue(tested)
+}
+
+func CheckSystemIssue(ok bool, tested string) *Result {
+	if ok {
+		return NoIssue(tested)
+	}
+	return SystemIssue(tested)
 }
 
 func NoIssue(tested string) *Result {

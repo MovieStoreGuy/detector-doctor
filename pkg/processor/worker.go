@@ -1,7 +1,6 @@
 package processor
 
 import (
-	"context"
 	"errors"
 	"sync"
 
@@ -24,7 +23,7 @@ type worker struct {
 	runner func(detectorId string, client interface{}) ([]*types.Result, error)
 }
 
-func newWorker(f func(string, interface{}) ([]types.Result, error)) *worker {
+func newWorker(f func(string, interface{}) ([]*types.Result, error)) *worker {
 	if f == nil {
 		panic("function parameter required")
 	}
@@ -40,9 +39,10 @@ func (w *worker) work(detectorID string, finished *sync.WaitGroup) {
 	}
 	async := func() {
 		defer finished.Done()
-		w.results, w.issue = w.runner(ctx, detectorID)
+		w.results, w.issue = w.runner(detectorID, nil)
 		w.done = true
 	}
+
 	go async()
 }
 

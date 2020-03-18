@@ -2,23 +2,24 @@ package processor
 
 import (
 	"context"
+	"net/http"
 	"sync"
 
 	"github.com/MovieStoreGuy/detector-doctor/pkg/types"
 )
 
 type runner struct {
-	client  interface{}
+	client  *http.Client
 	workers []worker
 }
 
 // NewDefaultService creates a processor that will inspect a
-func NewDefaultService(cli interface{}) Service {
+func NewDefaultService(cli *http.Client) Service {
 	r := &runner{
 		client:  cli,
-		workers: make([]workers, 0),
+		workers: make([]worker, 0),
 	}
-	// Add default workers functions in
+	// Add default workers functions into the service
 	return r
 }
 
@@ -30,16 +31,16 @@ func (r *runner) Run(ctx context.Context, detectorID string) ([]*types.Result, e
 	finished := &sync.WaitGroup{}
 	finished.Add(len(r.workers))
 	for _, w := range r.workers {
-		w.Work(detectorID, finished)
+		w.work(detectorID, finished)
 	}
 	finished.Wait()
 	results := make([]*types.Result, 0)
 	for _, w := range r.workers {
-		result, err := w.GetResults()
-		switch err {
-		case nil:
+		result, err := w.getResults()
+		switch {
+		case err == nil:
 			// Do nothing we expect it to be nil when we are good
-		case ErrJobNotComplete:
+		case err == ErrJobNotComplete:
 			// Should not be able to reach this state since we explictly wait for each job to complete
 			panic("reached an unreachable state")
 		default:
