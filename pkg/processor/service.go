@@ -11,5 +11,5 @@ import (
 type Service interface {
 
 	// Run will spawn all the workers and get all the results returned.
-	Run(ctx context.Context, detectorId string) ([]*types.Result, error)
+	Run(ctx context.Context, detectorID string) ([]*types.Result, error)
 }

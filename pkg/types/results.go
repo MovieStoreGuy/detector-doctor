@@ -1,13 +1,5 @@
 package types
 
-type Issue int8
-
-const (
-	OK Issue = iota + 1
-	System
-	User
-)
-
 const (
 	DefaultNoIssueExpression     = "No required action to take"
 	DefaultUserIssueExpresison   = "There is a issue with this detector due to user error"
@@ -15,9 +7,9 @@ const (
 )
 
 type Result struct {
-	IssueType Issue
-	Tested    string
-	Msg       string
+	IssueType Issue  `json:"issueType"`
+	Tested    string `json:"tested"`
+	Msg       string `json:"message"`
 }
 
 func (r *Result) WithMessage(msg string) *Result {

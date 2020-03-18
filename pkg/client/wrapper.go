@@ -45,6 +45,7 @@ func NewSignalFxClient(realm, accessToken string, client *http.Client) *SignalFx
 	return sfx
 }
 
+// makeRequest abstracts needing to handle the requests to and from SignalFx and returns the buffer read from the body
 func (sfx *SignalFx) makeRequest(ctx context.Context, method string, data io.Reader, queryParams map[string]interface{}, pathByParts ...string) ([]byte, error) {
 	url := path.Join(sfx.api, path.Join(pathByParts...))
 	if queryParams != nil {

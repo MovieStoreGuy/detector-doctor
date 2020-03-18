@@ -2,19 +2,19 @@ package processor
 
 import (
 	"context"
-	"net/http"
 	"sync"
 
+	"github.com/MovieStoreGuy/detector-doctor/pkg/client"
 	"github.com/MovieStoreGuy/detector-doctor/pkg/types"
 )
 
 type runner struct {
-	client  *http.Client
+	client  *client.SignalFx
 	workers []worker
 }
 
-// NewDefaultService creates a processor that will inspect a
-func NewDefaultService(cli *http.Client) Service {
+// NewDefaultService creates a processor that will inspect all the configured options
+func NewDefaultService(cli *client.SignalFx) Service {
 	r := &runner{
 		client:  cli,
 		workers: make([]worker, 0),
