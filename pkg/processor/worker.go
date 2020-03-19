@@ -13,6 +13,7 @@ var (
 )
 
 type worker struct {
+	rwlock  sync.RWMutex
 	done    bool
 	issue   error
 	results []*types.Result
@@ -39,6 +40,9 @@ func (w *worker) work(detectorID string, finished *sync.WaitGroup) {
 	}
 	async := func() {
 		defer finished.Done()
+		defer w.rwlock.Unlock()
+		w.rwlock.Lock()
+		w.done = false
 		w.results, w.issue = w.runner(detectorID, nil)
 		w.done = true
 	}
@@ -48,6 +52,8 @@ func (w *worker) work(detectorID string, finished *sync.WaitGroup) {
 
 // GetResults will not return any data until internal job is completed
 func (w *worker) getResults() ([]*types.Result, error) {
+	w.rwlock.RLock()
+	defer w.rwlock.RUnlock()
 	if !w.done {
 		return nil, ErrJobNotComplete
 	}

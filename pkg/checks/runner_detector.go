@@ -23,7 +23,7 @@ func CheckDetector(det *types.Detector) ([]*types.Result, error) {
 	}
 	for _, r := range det.Rules {
 		results = append(results,
-			types.CheckUserIssue(r.Disabled, "disabled rule").
+			types.CheckUserIssue(!r.Disabled, "disabled rule").
 				WithMessage("Ensuring rules are not disabled"),
 			types.CheckUserIssue(len(r.Notifications) > 0, "Notification rules set").
 				WithMessage("Ensure that there is a notification path"),

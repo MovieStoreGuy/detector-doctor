@@ -37,11 +37,12 @@ type Rule struct {
 	Notifications        []map[string]string `json:"notifications,omitempty"`
 	ParameterizedBody    string              `json:"parameterizedBody,omitempty"`
 	ParameterizedSubject string              `json:"parameterizedSubject,omitempty"`
-	RunbookUrl           string              `json:"runbookUrl,omitempty"`
+	RunbookURL           string              `json:"runbookUrl,omitempty"`
 	Severity             string              `json:"severity"`
 	Tip                  string              `json:"tip,omitempty"`
 }
 
+// Visualization defines the response object from the SignalFx API
 type Visualization struct {
 	DisableSampling     bool          `json:"disableSampling"`
 	PublishLabelOptions []interface{} `json:"publishLabelOptions"`
@@ -50,6 +51,7 @@ type Visualization struct {
 	Time                Time          `json:"time"`
 }
 
+// Time defines the response object from the SignalFx API to be used with Detectors
 type Time struct {
 	Start int64  `json:"start"`
 	End   int64  `json:"end"`

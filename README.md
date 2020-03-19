@@ -15,7 +15,6 @@ The follow code has been developed against Go version 1.14 and to ensure a trans
 
 The application will query the detector in order to establish what is the current issue with the detector:
 
-|-----------------------------|--------|-------------------------------------------------------------|
 | Testing                     | Issue  | Implemented?                                                |
 |-----------------------------|--------|-------------------------------------------------------------|
 | OverMTS Limt                | User   | Yes, Queries the result of the detector                     |
@@ -30,4 +29,4 @@ The application will query the detector in order to establish what is the curren
 | Missed alert                | System | No, need to be able to take the signalflow and compare when it should of fired when looking at last modified time |
 | Missed fired detector       | System | No, need to figure out how best to do this                  |
 | Drop in data points         | ??     | No, relies on querying MTS which isn't implemented          |
-|-----------------------------|--------|-------------------------------------------------------------|
+
