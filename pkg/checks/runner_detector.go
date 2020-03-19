@@ -19,7 +19,7 @@ func CheckDetector(ctx context.Context, detectorID string, sfx *client.SignalFx)
 		return nil, err
 	}
 	results := []*types.Result{
-		types.CheckUserIssue(det.OverMTSLimit, "Over MTS limit").
+		types.CheckUserIssue(!det.OverMTSLimit, "Over MTS limit").
 			WithMessage("Reduce the number of time series by applying further filtering"),
 		// Would like to follow up with their support to understand when a detector can be locked
 		types.CheckSystemIssue(!det.Locked, "Locked").
