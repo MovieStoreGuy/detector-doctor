@@ -1,14 +1,22 @@
 package checks
 
 import (
+	"context"
+
+	"github.com/MovieStoreGuy/detector-doctor/pkg/client"
 	"github.com/MovieStoreGuy/detector-doctor/pkg/types"
 )
 
 // CheckDetector inspects the settings of the detector to see if there is any user
 // settings that have been set that could of caused issues with detector.
-func CheckDetector(det *types.Detector) ([]*types.Result, error) {
-	if det == nil {
-		return nil, types.ErrNoDetectorFound
+func CheckDetector(ctx context.Context, detectorID string, sfx *client.SignalFx) ([]*types.Result, error) {
+	if sfx == nil {
+		return nil, types.ErrMissingClient
+	}
+	// TODO(Sean Marciniak): Quick check to see if this exists in the cache
+	det, err := sfx.GetDetectorByID(ctx, detectorID)
+	if err != nil {
+		return nil, err
 	}
 	results := []*types.Result{
 		types.CheckUserIssue(det.OverMTSLimit, "Over MTS limit").

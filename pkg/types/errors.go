@@ -9,4 +9,6 @@ var (
 	ErrAPIIssue = errors.New("unable to process request")
 
 	ErrNotImplemented = errors.New("currently not implemented")
+
+	ErrMissingClient = errors.New("missing required client")
 )

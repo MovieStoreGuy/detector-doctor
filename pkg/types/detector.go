@@ -11,22 +11,22 @@ type Detector struct {
 	Creator       string `json:"creator"`
 	LastUpdatedBy string `json:"lastUpdatedBy"`
 
-	CustomProperties string           `json:"customProperties"`
-	Locked           bool             `json:"locked"`
-	LabelResolutions map[string]int64 `json:"labelResolution"`
-	MaxDelay         int32            `json:"maxDelay"`
-	OverMTSLimit     bool             `json:"overMTSLimit"`
-	Timezone         string           `json:"timezone"`
+	CustomProperties map[string]interface{} `json:"customProperties"`
+	Locked           bool                   `json:"locked"`
+	LabelResolutions map[string]int64       `json:"labelResolution"`
+	MaxDelay         int32                  `json:"maxDelay"`
+	OverMTSLimit     bool                   `json:"overMTSLimit"`
+	Timezone         string                 `json:"timezone"`
 
 	// User Supplied values
 
-	Name                 string          `json:"name"`
-	Description          string          `json:"description"`
-	Teams                []string        `json:"teams"`
-	Tags                 []string        `json:"tags"`
-	ProgramText          string          `json:"programText"`
-	Rules                []Rule          `json:"rules"`
-	VisualizationOptions []Visualization `json:"visualizationOptions"`
+	Name                 string        `json:"name"`
+	Description          string        `json:"description"`
+	Teams                []string      `json:"teams"`
+	Tags                 []string      `json:"tags"`
+	ProgramText          string        `json:"programText"`
+	Rules                []Rule        `json:"rules"`
+	VisualizationOptions Visualization `json:"visualizationOptions"`
 }
 
 // Rule defines the response object from the SignalFx API

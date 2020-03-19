@@ -13,6 +13,17 @@ The follow code has been developed against Go version 1.14 and to ensure a trans
 
 ## Usage
 
+```bash
+$ detdoc [--flags] --token ${SFX_API_TOKEN} detectorID, ...
+```  
+_To get the most up to date flags, run the application locally_
+
+
+This will query the SignalFx API to read the detectorIDs provided to it establish if there is any obvious errors with the detector,
+the result of this will produce a report for each detector request.
+
+## Intent / How it works
+
 The application will query the detector in order to establish what is the current issue with the detector:
 
 | Testing                     | Issue  | Implemented?                                                |

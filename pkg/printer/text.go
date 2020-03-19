@@ -7,9 +7,10 @@ import (
 )
 
 func textPrinter(detectorID string, results []*types.Result) error {
-	fmt.Printf("Detector ID: %s", detectorID)
+	fmt.Println()
+	fmt.Println("Detector ID: ", detectorID)
 	for _, result := range results {
-		fmt.Printf("Error:%s, Tested:%s, Message:%s", result.IssueType.String(), result.Tested, result.Msg)
+		fmt.Printf("Error:%s, Tested:%s, Message:%s\n", result.IssueType.String(), result.Tested, result.Msg)
 	}
 	return nil
 }

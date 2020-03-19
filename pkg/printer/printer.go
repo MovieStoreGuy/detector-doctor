@@ -9,7 +9,9 @@ import (
 var (
 	printers = map[string]Printer{
 		"text": textPrinter,
-		"json": jsonPrinter,
+		// Current a bug in how I am using the printers which requires a bit of work
+		// to make sure there is no issue there.
+		// "json": jsonPrinter,
 	}
 )
 

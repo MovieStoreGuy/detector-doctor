@@ -1,9 +1,12 @@
 package processor
 
 import (
+	"context"
 	"errors"
 	"sync"
 
+	"github.com/MovieStoreGuy/detector-doctor/pkg/checks"
+	"github.com/MovieStoreGuy/detector-doctor/pkg/client"
 	"github.com/MovieStoreGuy/detector-doctor/pkg/types"
 )
 
@@ -18,32 +21,34 @@ type worker struct {
 	issue   error
 	results []*types.Result
 
-	client interface{}
+	client *client.SignalFx
 
 	// Runner is the unique method to query facts regarding the detector
-	runner func(detectorId string, client interface{}) ([]*types.Result, error)
+	runner checks.Check
 }
 
-func newWorker(f func(string, interface{}) ([]*types.Result, error)) *worker {
+func newWorker(sfx *client.SignalFx, f checks.Check) *worker {
 	if f == nil {
 		panic("function parameter required")
 	}
 	return &worker{
+		client: sfx,
 		runner: f,
 	}
 }
 
 // Work abstracts the knowledge the underlying running is running within its own go routine
-func (w *worker) work(detectorID string, finished *sync.WaitGroup) {
+func (w *worker) work(ctx context.Context, detectorID string, finished *sync.WaitGroup) {
 	if w.runner == nil {
 		return
 	}
+
 	async := func() {
 		defer finished.Done()
 		defer w.rwlock.Unlock()
 		w.rwlock.Lock()
 		w.done = false
-		w.results, w.issue = w.runner(detectorID, nil)
+		w.results, w.issue = w.runner(ctx, detectorID, w.client)
 		w.done = true
 	}
 

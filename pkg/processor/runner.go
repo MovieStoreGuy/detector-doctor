@@ -4,34 +4,35 @@ import (
 	"context"
 	"sync"
 
+	"github.com/MovieStoreGuy/detector-doctor/pkg/checks"
 	"github.com/MovieStoreGuy/detector-doctor/pkg/client"
 	"github.com/MovieStoreGuy/detector-doctor/pkg/types"
 )
 
 type runner struct {
 	client  *client.SignalFx
-	workers []worker
+	workers []*worker
 }
 
 // NewDefaultService creates a processor that will inspect all the configured options
 func NewDefaultService(cli *client.SignalFx) Service {
 	r := &runner{
 		client:  cli,
-		workers: make([]worker, 0),
+		workers: make([]*worker, 0),
 	}
 	// Add default workers functions into the service
+	r.workers = append(r.workers,
+		newWorker(cli, checks.CheckDetector),
+	)
 	return r
 }
 
 func (r *runner) Run(ctx context.Context, detectorID string) ([]*types.Result, error) {
-	// To spend things up, fetch the currently detector state from SignalFx
-	// to avoid over querying the API and risk potentially being rate limited
-
 	// Start all internal workers to fetch the required information for the detector
 	finished := &sync.WaitGroup{}
 	finished.Add(len(r.workers))
 	for _, w := range r.workers {
-		w.work(detectorID, finished)
+		w.work(ctx, detectorID, finished)
 	}
 	finished.Wait()
 	results := make([]*types.Result, 0)

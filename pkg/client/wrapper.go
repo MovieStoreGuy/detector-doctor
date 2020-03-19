@@ -7,8 +7,8 @@ import (
 	"io"
 	"io/ioutil"
 	"net/http"
+	"net/url"
 	"path"
-	"strings"
 
 	"github.com/MovieStoreGuy/detector-doctor/pkg/types"
 )
@@ -47,15 +47,17 @@ func NewSignalFxClient(realm, accessToken string, client *http.Client) *SignalFx
 
 // makeRequest abstracts needing to handle the requests to and from SignalFx and returns the buffer read from the body
 func (sfx *SignalFx) makeRequest(ctx context.Context, method string, data io.Reader, queryParams map[string]interface{}, pathByParts ...string) ([]byte, error) {
-	url := path.Join(sfx.api, path.Join(pathByParts...))
-	if queryParams != nil {
-		params := make([]string, 0)
-		for name, value := range queryParams {
-			params = append(params, fmt.Sprintf("%s=%s", name, value))
-		}
-		url = url + "?" + strings.Join(params, "&")
+	domain, err := url.Parse(sfx.api)
+	if err != nil {
+		return nil, err
 	}
-	req, err := sfx.requestFunc(ctx, method, url, data)
+	domain.Path = path.Join(domain.Path, path.Join(pathByParts...))
+	q := domain.Query()
+	for name, value := range queryParams {
+		q.Set(name, fmt.Sprint(value))
+	}
+	domain.RawQuery = q.Encode()
+	req, err := sfx.requestFunc(ctx, method, domain.String(), data)
 	if err != nil {
 		return nil, err
 	}

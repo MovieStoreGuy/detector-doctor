@@ -11,8 +11,7 @@ RUN set -x && \
     go test --cover -v ./... && \
     go build -o /detdoc \
         --ldflags="-s -w -X main.Version=`git describe --tags` -X main.GitHash=`git rev-parse --verify HEAD`" \
-        -v \
-        cmd/* && \
+        -v *.go && \
     set +x
 
 FROM alpine:3.9
@@ -31,3 +30,4 @@ RUN set -x && \
     set +x 
 
 USER detdoc:detdoc
+ENTRYPOINT [ "/detdoc" ]
