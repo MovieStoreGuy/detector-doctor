@@ -9,8 +9,11 @@ import (
 	"net/http"
 	"net/url"
 	"path"
+	"strings"
+	"time"
 
 	"github.com/MovieStoreGuy/detector-doctor/pkg/types"
+	"github.com/gorilla/websocket"
 )
 
 const (
@@ -19,13 +22,18 @@ const (
 
 	// DefaultAPIEndpoint is the domain to be used when querying the API with the realm set
 	DefaultAPIEndpoint = `https://api.%s.signalfx.com/v2`
+
+	// DefaultStreamEndpoint is the domain to be used when using websockets to get data
+	DefaultStreamEndpoint = `https://stream.%s.signalfx.com/v2`
 )
 
 // SignalFx is the wrapper around the developer API
 type SignalFx struct {
 	api         string
+	stream      string
 	client      *http.Client
 	requestFunc func(ctx context.Context, method, url string, body io.Reader) (*http.Request, error)
+	websocFunc  func(ctx context.Context, url string) (*websocket.Conn, error)
 }
 
 // NewSignalFxClient returns a configured client that will interact with the API
@@ -34,11 +42,13 @@ func NewSignalFxClient(realm, accessToken string, client *http.Client) *SignalFx
 	sfx := &SignalFx{
 		client:      client,
 		requestFunc: NewConfiguredRequestFunc(accessToken),
+		websocFunc:  NewConfiguredWebsocketFunc(accessToken),
 	}
 	if realm == "" {
 		realm = DefaultRealm
 	}
 	sfx.api = fmt.Sprintf(DefaultAPIEndpoint, realm)
+	sfx.stream = fmt.Sprintf(DefaultStreamEndpoint, realm)
 	if sfx.client == nil {
 		sfx.client = NewConfiguredClient()
 	}
@@ -74,6 +84,60 @@ func (sfx *SignalFx) makeRequest(ctx context.Context, method string, data io.Rea
 		return nil, types.ErrNoDetectorFound
 	}
 	return ioutil.ReadAll(resp.Body)
+}
+
+func (sfx *SignalFx) readStreamData(ctx context.Context, programText string, opts map[string]interface{}) error {
+	domain, err := url.Parse(sfx.stream)
+	if err != nil {
+		return err
+	}
+	domain.Path = path.Join(domain.Path, "signalflow/connect")
+	domain.Scheme = strings.Replace(domain.Scheme, "http", "ws", 1)
+	fmt.Println("Creating socket")
+	conn, err := sfx.websocFunc(ctx, domain.String())
+	fmt.Println("Got a connection")
+	if err != nil {
+		return err
+	}
+	defer conn.Close()
+	jobSpec := map[string]interface{}{
+		"type":    "execute",
+		"channel": "detdoc-0",
+		"program": programText,
+	}
+	for field, value := range opts {
+		if _, exist := jobSpec[field]; !exist && value != nil {
+			jobSpec[field] = value
+		}
+	}
+	if _, exist := jobSpec["start"]; !exist {
+		jobSpec["start"] = time.Now().Add(-1 * 24 * time.Hour).Unix()
+	}
+	if _, exist := jobSpec["stop"]; !exist {
+		jobSpec["stop"] = time.Now().Unix()
+	}
+	err = conn.WriteJSON(jobSpec)
+	if err != nil {
+		return err
+	}
+	fmt.Println("reading the data off")
+	for {
+		msgType, message, err := conn.ReadMessage()
+		if err != nil {
+			return err
+		}
+		switch msgType {
+		case websocket.TextMessage, websocket.BinaryMessage:
+			fmt.Println(string(message))
+		case websocket.PingMessage:
+
+		case websocket.PongMessage:
+
+		case websocket.CloseMessage:
+			return nil
+		}
+	}
+
 }
 
 // GetDetectorByID retrives the provided detector as defined by https://developers.signalfx.com/detectors_reference.html#tag/Retrieve-Detector-ID

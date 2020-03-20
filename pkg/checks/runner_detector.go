@@ -10,13 +10,17 @@ import (
 // CheckDetector inspects the settings of the detector to see if there is any user
 // settings that have been set that could of caused issues with detector.
 func CheckDetector(ctx context.Context, detectorID string, sfx *client.SignalFx) ([]*types.Result, error) {
-	if sfx == nil {
-		return nil, types.ErrMissingClient
-	}
-	// TODO(Sean Marciniak): Quick check to see if this exists in the cache
-	det, err := sfx.GetDetectorByID(ctx, detectorID)
-	if err != nil {
-		return nil, err
+	det := getGlobalCache().getDetector(detectorID)
+	if det == nil {
+		if sfx == nil {
+			return nil, types.ErrMissingClient
+		}
+		d, err := sfx.GetDetectorByID(ctx, detectorID)
+		if err != nil {
+			return nil, err
+		}
+		getGlobalCache().setDetector(detectorID, d)
+		det = d
 	}
 	results := []*types.Result{
 		types.CheckUserIssue(!det.OverMTSLimit, "Over MTS limit").

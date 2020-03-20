@@ -3,9 +3,13 @@ package client
 import (
 	"context"
 	"crypto/tls"
+	"errors"
+	"fmt"
 	"io"
 	"net/http"
 	"time"
+
+	"github.com/gorilla/websocket"
 )
 
 const (
@@ -58,5 +62,32 @@ func NewConfiguredRequestFunc(token string) func(ctx context.Context, method, ur
 		// Override the default language user agent to be clearly defined
 		req.Header.Add("User-Agent", UserAgent)
 		return req, nil
+	}
+}
+
+// NewConfiguredWebsocketFunc returns a new configured websocket to adhere to the docs provided here: https://developers.signalfx.com/signalflow_analytics/websocket_request_messages.html
+func NewConfiguredWebsocketFunc(token string) func(ctx context.Context, streamEndpoint string) (*websocket.Conn, error) {
+
+	return func(ctx context.Context, url string) (*websocket.Conn, error) {
+		headers := http.Header{}
+		headers.Add("User-Agent", UserAgent)
+		headers.Add("X-SF-TOKEN", token)
+		conn, resp, err := websocket.DefaultDialer.DialContext(ctx, url, headers)
+		if err != nil {
+			return nil, err
+		}
+		fmt.Println(resp)
+		fmt.Println("status code", resp.StatusCode)
+		if resp.StatusCode >= 200 && resp.StatusCode != http.StatusOK {
+			return nil, errors.New("non 200 response on trying to connect websocket")
+		}
+		// Ensuring the websocket is configured when it is returned
+		fmt.Println("Requesting auth")
+		err = conn.WriteJSON(map[string]string{
+			"type":  "authenticate",
+			"token": token,
+		})
+		conn.ReadMessage()
+		return conn, err
 	}
 }
