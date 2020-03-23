@@ -27,6 +27,10 @@ const (
 	DefaultStreamEndpoint = `https://stream.%s.signalfx.com/v2`
 )
 
+func toUnixMilliseconds(t time.Time) int64 {
+	return t.UnixNano() / int64(time.Millisecond)
+}
+
 // SignalFx is the wrapper around the developer API
 type SignalFx struct {
 	api         string
@@ -86,58 +90,79 @@ func (sfx *SignalFx) makeRequest(ctx context.Context, method string, data io.Rea
 	return ioutil.ReadAll(resp.Body)
 }
 
-func (sfx *SignalFx) readStreamData(ctx context.Context, programText string, opts map[string]interface{}) error {
+func (sfx *SignalFx) readStreamData(ctx context.Context, programText string, opts map[string]interface{}) ([]types.Message, []*types.MetricDataPoint, error) {
 	domain, err := url.Parse(sfx.stream)
 	if err != nil {
-		return err
+		return nil, nil, err
 	}
 	domain.Path = path.Join(domain.Path, "signalflow/connect")
 	domain.Scheme = strings.Replace(domain.Scheme, "http", "ws", 1)
-	fmt.Println("Creating socket")
 	conn, err := sfx.websocFunc(ctx, domain.String())
-	fmt.Println("Got a connection")
 	if err != nil {
-		return err
+		return nil, nil, err
 	}
 	defer conn.Close()
 	jobSpec := map[string]interface{}{
-		"type":    "execute",
-		"channel": "detdoc-0",
-		"program": programText,
+		"type":     "execute",
+		"channel":  "detdoc-0",
+		"program":  programText,
+		"timezone": "UTC",
 	}
 	for field, value := range opts {
 		if _, exist := jobSpec[field]; !exist && value != nil {
 			jobSpec[field] = value
 		}
 	}
+	now := time.Now().UTC()
 	if _, exist := jobSpec["start"]; !exist {
-		jobSpec["start"] = time.Now().Add(-1 * 24 * time.Hour).Unix()
+		jobSpec["start"] = toUnixMilliseconds(now.Add(-1 * 24 * time.Hour))
 	}
 	if _, exist := jobSpec["stop"]; !exist {
-		jobSpec["stop"] = time.Now().Unix()
+		if _, set := jobSpec["immediate"]; !set {
+			jobSpec["stop"] = toUnixMilliseconds(now)
+		}
 	}
 	err = conn.WriteJSON(jobSpec)
 	if err != nil {
-		return err
+		return nil, nil, err
 	}
-	fmt.Println("reading the data off")
-	for {
+	messages := make([]types.Message, 0)
+	datapoints := make([]*types.MetricDataPoint, 0)
+	for stopped := false; !stopped; {
 		msgType, message, err := conn.ReadMessage()
 		if err != nil {
-			return err
+			return nil, nil, err
+		}
+		if errRead := types.ReadWebsocketError(message); errRead != nil {
+			return nil, nil, errRead
+		}
+		if types.IsEndofMessages(types.ReadControlMessage(message)) {
+			break
 		}
 		switch msgType {
-		case websocket.TextMessage, websocket.BinaryMessage:
-			fmt.Println(string(message))
-		case websocket.PingMessage:
+		case websocket.TextMessage:
+			if control := types.ReadControlMessage(message); control != nil {
+				if types.IsEndofMessages(control) {
+					stopped = true
+					break
+				}
+			} else if meta := types.ReadMetadataMessage(message); meta != nil {
+				messages = append(messages, meta)
 
-		case websocket.PongMessage:
-
+			} else if gen := types.ReadGeneralMessage(message); gen != nil {
+				messages = append(messages, gen)
+			}
+		case websocket.BinaryMessage:
+			dp, err := types.ReadMetricDataPoint(message)
+			if err != nil {
+				return nil, nil, err
+			}
+			datapoints = append(datapoints, dp)
 		case websocket.CloseMessage:
-			return nil
+			return messages, datapoints, nil
 		}
 	}
-
+	return messages, datapoints, nil
 }
 
 // GetDetectorByID retrives the provided detector as defined by https://developers.signalfx.com/detectors_reference.html#tag/Retrieve-Detector-ID
@@ -153,4 +178,14 @@ func (sfx *SignalFx) GetDetectorByID(ctx context.Context, detectorID string) (*t
 // GetIncidentsByDetectorID retrives the provided incidents as defined by https://developers.signalfx.com/detectors_reference.html#tag/Retrieve-Incidents-Single-Detector
 func (sfx *SignalFx) GetIncidentsByDetectorID(ctx context.Context, detectorID string, query map[string]interface{}) ([]*types.Incident, error) {
 	return nil, types.ErrNotImplemented
+}
+
+// GetMetricTimeSeries returns the messages and data provided by the websocket API.
+func (sfx *SignalFx) GetMetricTimeSeries(ctx context.Context, programText string, params map[string]interface{}) ([]types.Message, []*types.MetricDataPoint, error) {
+	for field, value := range params {
+		if t, cast := value.(time.Time); cast {
+			params[field] = toUnixMilliseconds(t)
+		}
+	}
+	return sfx.readStreamData(ctx, programText, params)
 }
