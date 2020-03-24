@@ -6,6 +6,7 @@ const (
 	ExpectControlType = "control-message"
 
 	ControlMessageEndEvent         = "END_OF_CHANNEL"
+	ControlMessageAbortEvent       = "ABORT_CHANNEL"
 	ControlMessageStartStreamEvent = "STREAM_START"
 )
 
@@ -26,5 +27,5 @@ func ReadControlMessage(data []byte) *ControlMessage {
 }
 
 func IsEndofMessages(msg *ControlMessage) bool {
-	return msg != nil && ControlMessageEndEvent == msg.Event
+	return msg != nil && (ControlMessageEndEvent == msg.Event || ControlMessageAbortEvent == msg.Event)
 }

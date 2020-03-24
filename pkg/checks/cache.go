@@ -44,7 +44,7 @@ func (c *cache) explictWaitGetDetector(ID string, timeout time.Duration) *types.
 		return res
 	}
 	background := func(r chan *types.Detector) {
-		timer := time.NewTicker(100 * time.Millisecond)
+		timer := time.NewTicker(1000 * time.Millisecond)
 		explictStop := time.NewTicker(timeout)
 		for {
 			select {

@@ -181,6 +181,9 @@ func (sfx *SignalFx) GetIncidentsByDetectorID(ctx context.Context, detectorID st
 }
 
 // GetMetricTimeSeries returns the messages and data provided by the websocket API.
+// The list of allowed parameters are documented here: https://developers.signalfx.com/signalflow_analytics/websocket_request_messages.html#_syntax_2
+// Some of the values are predefined for you to avoid causing issues with handling computation
+// All time values passed should be in UTC and all time values will be configured to be int64 values
 func (sfx *SignalFx) GetMetricTimeSeries(ctx context.Context, programText string, params map[string]interface{}) ([]types.Message, []*types.MetricDataPoint, error) {
 	for field, value := range params {
 		if t, cast := value.(time.Time); cast {

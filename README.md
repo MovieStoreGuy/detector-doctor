@@ -26,18 +26,18 @@ the result of this will produce a report for each detector request.
 
 The application will query the detector in order to establish what is the current issue with the detector:
 
-| Testing                     | Issue  | Implemented?                                                |
-|-----------------------------|--------|-------------------------------------------------------------|
-| OverMTS Limt                | User   | Yes, Queries the result of the detector                     |
-| Has Notificaiton            | User   | Yes, checks to see if any notification rules are set        |
-| Has Program Text            | User   | Yes, checks to see if there is any program text defined     |
-| Is locked                   | System | Yes, though not sure what can cause a detector to be locked |
-| Valid SignalFlow            | User   | No, need an easy to validate SignalFlow                     |
-| Handling Sparse Metrics     | User   | No, need to implement handling SSE on signalflow endpoint   |
-| Disabled rules              | User   | Yes, queries the rules set with a detector                  |
-| Depends on properties       | User   | No, currently looking at way to handle this check           | 
-| Metrics are delayed         | ??     | No, need to be able to query the underlying MTS             |
-| Missed alert                | System | No, need to be able to take the signalflow and compare when it should of fired when looking at last modified time |
-| Missed fired detector       | System | No, need to figure out how best to do this                  |
-| Drop in data points         | ??     | No, relies on querying MTS which isn't implemented          |
+| Testing                     | Issue            | Implemented?                                                |
+|-----------------------------|------------------|-------------------------------------------------------------|
+| OverMTS Limt                | User             | Yes, Queries the result of the detector                     |
+| Has Notificaiton            | User             | Yes, checks to see if any notification rules are set        |
+| Has Program Text            | User             | Yes, checks to see if there is any program text defined     |
+| Is locked                   | System           | Yes, though not sure what can cause a detector to be locked |
+| Valid SignalFlow            | User             | Yes, it processed using websockets                          |
+| Handling Sparse Metrics     | User             | Yes, there is currently an active check to address this     |
+| Disabled rules              | User             | Yes, queries the rules set with a detector                  |
+| Depends on properties       | User             | No, currently looking at way to handle this check           | 
+| Metrics are delayed         | Informational    | No, need to be able to query the underlying MTS             |
+| Missed alert                | System           | No, need to be able to take the signalflow and compare when it should of fired when looking at last modified time |
+| Missed fired detector       | System           | No, need to figure out how best to do this                  |
+| Drop in data points         | Informational    | No, relies on querying MTS which isn't implemented          |
 

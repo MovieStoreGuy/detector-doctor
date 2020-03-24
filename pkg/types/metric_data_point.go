@@ -31,7 +31,7 @@ type MetricDataPoint struct {
 
 // Data represents a singular value
 type Data struct {
-	Version      int8   `json:"version,omitempty"`
+	Version      uint8  `json:"version,omitempty"`
 	TimeSeriesID string `json:"tsId"`
 	// Value represents either a float32, int32 or nil
 	Value interface{} `json:"value"`
@@ -60,7 +60,7 @@ func ReadMetricDataPoint(bin []byte) (*MetricDataPoint, error) {
 		&dp.Mtype,
 		&dp.Flags,
 	}
-	header, data := bin[:20], bin[:20]
+	header, data := bin[:20], bin[20:]
 	for index := 0; index < len(values); index++ {
 		if err := binary.Read(bytes.NewReader(header[0:1]), Endian, values[index]); err != nil {
 			return nil, err
@@ -91,7 +91,7 @@ func ReadMetricDataPoint(bin []byte) (*MetricDataPoint, error) {
 		data = buf
 	}
 	if isJSON {
-		if err := json.Unmarshal(data, &dp); err != nil {
+		if err := json.Unmarshal(data, &dp.Data); err != nil {
 			return nil, err
 		}
 		return dp, nil
@@ -110,20 +110,39 @@ func ReadMetricDataPoint(bin []byte) (*MetricDataPoint, error) {
 	// Discarding the first four values as per their code base suggests
 	// Not entirely sure why but go with it...
 	// data = data[4:]
-
-	for ; len(data) > 17; data = data[17:] {
+	var size uint32 = 0
+	if err := binary.Read(bytes.NewBuffer(data[:4]), Endian, &size); err != nil {
+		return nil, err
+	}
+	data = data[4:]
+	for i := 0; i < int(size); i++ {
 		point := &Data{}
-		if err := binary.Read(bytes.NewBuffer(data[0:1]), Endian, &point.Version); err != nil {
+		if err := binary.Read(bytes.NewBuffer(data[:1]), Endian, &point.Version); err != nil {
 			return nil, err
 		}
-		decoder := base64.NewDecoder(base64.RawURLEncoding, bytes.NewBuffer(data[1:9]))
-		buf, err := ioutil.ReadAll(decoder)
-		if err != nil {
+		tsid := make([]byte, 7)
+		if err := binary.Read(bytes.NewBuffer(data[1:8]), Endian, tsid); err != nil {
 			return nil, err
 		}
-		point.TimeSeriesID = strings.Replace(string(buf), "=", "", -1)
-		// Need to do something with value
+		point.TimeSeriesID = strings.Replace(base64.URLEncoding.EncodeToString(tsid), "=", "", -1)
+
+		// For reference, refer to this: https://developers.signalfx.com/signalflow_analytics/rest_api_messages/stream_messages_specification.html#table-3-data-message-payload-fields
+		switch point.Version {
+		case 2: // Is a double c type
+			var value float64 = 0.0
+			if err := binary.Read(bytes.NewBuffer(data[9:17]), Endian, &value); err != nil {
+				return nil, err
+			}
+			point.Value = value
+		case 1, 3: // Is a int c type
+			var value int64
+			if err := binary.Read(bytes.NewBuffer(data[9:17]), Endian, &value); err != nil {
+				return nil, err
+			}
+			point.Value = value
+		}
 		dp.Data = append(dp.Data, point)
+		data = data[17:]
 	}
 	return dp, nil
 }

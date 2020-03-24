@@ -24,4 +24,6 @@ const (
 	System
 	// User is used when the issue relates to an issue that is result of user action
 	User
+	// Informational is used when as guide to highlight potential issue
+	Informational
 )

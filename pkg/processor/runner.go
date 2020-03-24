@@ -23,6 +23,7 @@ func NewDefaultService(cli *client.SignalFx) Service {
 	// Add default workers functions into the service
 	r.workers = append(r.workers,
 		newWorker(cli, checks.CheckDetector),
+		newWorker(cli, checks.CheckTimeSeries),
 	)
 	return r
 }

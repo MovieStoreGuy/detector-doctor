@@ -1,9 +1,10 @@
 package types
 
 const (
-	defaultNoIssueExpression     = "No required action to take"
-	defaultUserIssueExpresison   = "There is a issue with this detector due to user error"
-	defaultSystemIssueExpression = "There is an unknown issue with this detector that can not be manually resolved"
+	defaultNoIssueExpression       = "No required action to take"
+	defaultUserIssueExpresison     = "There is a issue with this detector due to user error"
+	defaultSystemIssueExpression   = "There is an unknown issue with this detector that can not be manually resolved"
+	defaultInformationalExpression = "Could be of use to understand when investigating an issue"
 )
 
 // Result used when evaluation a known condition for a detector to be in an errored state
@@ -39,6 +40,13 @@ func CheckSystemIssue(ok bool, tested string) *Result {
 	return SystemIssue(tested)
 }
 
+func CheckInformational(ok bool, tested string) *Result {
+	if ok {
+		return NoIssue(tested)
+	}
+	return InformationalIssue(tested)
+}
+
 // NoIssue returns a Result with its IssueType set as OK and default message
 func NoIssue(tested string) *Result {
 	return &Result{
@@ -63,5 +71,14 @@ func SystemIssue(tested string) *Result {
 		IssueType: System,
 		Tested:    tested,
 		Msg:       defaultSystemIssueExpression,
+	}
+}
+
+// InformationalIssue returns a result is meant as an informative piece
+func InformationalIssue(tested string) *Result {
+	return &Result{
+		IssueType: Informational,
+		Tested:    tested,
+		Msg:       defaultInformationalExpression,
 	}
 }
