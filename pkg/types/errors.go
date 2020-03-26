@@ -11,4 +11,6 @@ var (
 	ErrNotImplemented = errors.New("currently not implemented")
 
 	ErrMissingClient = errors.New("missing required client")
+
+	ErrFailedAuth = errors.New("failed auth")
 )

@@ -16,7 +16,7 @@ var (
 )
 
 // Printer defines the expected printer and will write results
-type Printer func(detectorID string, results []*types.Result) error
+type Printer func(detectorID string, results []*types.Result, filters ...Filter) error
 
 // ConfiguredPrinters returns a list of all currently configured printers that can be used
 func ConfiguredPrinters() []string {

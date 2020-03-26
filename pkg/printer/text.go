@@ -6,7 +6,11 @@ import (
 	"github.com/MovieStoreGuy/detector-doctor/pkg/types"
 )
 
-func textPrinter(detectorID string, results []*types.Result) error {
+func textPrinter(detectorID string, res []*types.Result, filters ...Filter) error {
+	results := res
+	for _, f := range filters {
+		results = f(results)
+	}
 	fmt.Println()
 	fmt.Println("Detector ID: ", detectorID)
 	for _, result := range results {

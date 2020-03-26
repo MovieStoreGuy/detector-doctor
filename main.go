@@ -27,7 +27,9 @@ func main() {
 	proc := processor.NewDefaultService(client.NewSignalFxClient(
 		paramRealm,
 		paramToken,
-		client.NewConfiguredClient(),
+		client.NewConfiguredClient(
+			client.WithFlagSet(paramDisableHTTP2, client.DisableHTTP2),
+		),
 	))
 	for _, detectorID := range flag.Args() {
 		results, err := proc.Run(context.Background(), detectorID)
@@ -36,6 +38,6 @@ func main() {
 			os.Exit(1)
 		}
 		// Results Printer that shows the results for a given detector ID
-		writer(detectorID, results)
+		writer(detectorID, results, paramFilters.Filters...)
 	}
 }

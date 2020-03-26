@@ -12,6 +12,7 @@ import (
 	"strings"
 	"time"
 
+	ratelimit "github.com/MovieStoreGuy/detector-doctor/pkg/rate_limit"
 	"github.com/MovieStoreGuy/detector-doctor/pkg/types"
 	"github.com/gorilla/websocket"
 )
@@ -36,6 +37,7 @@ type SignalFx struct {
 	api         string
 	stream      string
 	client      *http.Client
+	limiter     ratelimit.Limiter
 	requestFunc func(ctx context.Context, method, url string, body io.Reader) (*http.Request, error)
 	websocFunc  func(ctx context.Context, url string) (*websocket.Conn, error)
 }
@@ -45,6 +47,7 @@ type SignalFx struct {
 func NewSignalFxClient(realm, accessToken string, client *http.Client) *SignalFx {
 	sfx := &SignalFx{
 		client:      client,
+		limiter:     &ratelimit.NullLimiter{},
 		requestFunc: NewConfiguredRequestFunc(accessToken),
 		websocFunc:  NewConfiguredWebsocketFunc(accessToken),
 	}
@@ -59,8 +62,20 @@ func NewSignalFxClient(realm, accessToken string, client *http.Client) *SignalFx
 	return sfx
 }
 
+// NewRateLimitedSignalFxClient returns a SignalFx client with a configured limiter to be used on each outbound request
+func NewRateLimitedSignalFxClient(realm, accessToken string, client *http.Client, limit ratelimit.Limiter) *SignalFx {
+	sfx := NewSignalFxClient(realm, accessToken, client)
+	if limit != nil {
+		sfx.limiter = limit
+	}
+	return sfx
+}
+
 // makeRequest abstracts needing to handle the requests to and from SignalFx and returns the buffer read from the body
 func (sfx *SignalFx) makeRequest(ctx context.Context, method string, data io.Reader, queryParams map[string]interface{}, pathByParts ...string) ([]byte, error) {
+	if err := sfx.limiter.Consume(ctx); err != nil {
+		return nil, err
+	}
 	domain, err := url.Parse(sfx.api)
 	if err != nil {
 		return nil, err
@@ -82,6 +97,8 @@ func (sfx *SignalFx) makeRequest(ctx context.Context, method string, data io.Rea
 	switch resp.StatusCode {
 	case http.StatusOK:
 		// Do Nothing
+	case http.StatusUnauthorized:
+		return nil, types.ErrFailedAuth
 	case http.StatusBadRequest:
 		return nil, types.ErrAPIIssue
 	case http.StatusNotFound:
@@ -91,6 +108,9 @@ func (sfx *SignalFx) makeRequest(ctx context.Context, method string, data io.Rea
 }
 
 func (sfx *SignalFx) readStreamData(ctx context.Context, programText string, opts map[string]interface{}) ([]types.Message, []*types.MetricDataPoint, error) {
+	if err := sfx.limiter.Consume(ctx); err != nil {
+		return nil, nil, err
+	}
 	domain, err := url.Parse(sfx.stream)
 	if err != nil {
 		return nil, nil, err
@@ -163,6 +183,38 @@ func (sfx *SignalFx) readStreamData(ctx context.Context, programText string, opt
 		}
 	}
 	return messages, datapoints, nil
+}
+
+// GetAllDetectors will fetch all V2 detectors from the SignalFx api with a limit of fetching 100 per request
+// in order to keep performance high.
+func (sfx *SignalFx) GetAllDetectors(ctx context.Context) ([]*types.Detector, error) {
+	limit, count := 100, 100
+	results := make([]*types.Detector, 0)
+	for offset := 0; offset < count; offset += limit {
+		opts := map[string]interface{}{
+			"offset": offset,
+			"limit":  limit,
+		}
+		buff, err := sfx.makeRequest(ctx, http.MethodGet, nil, opts, "detector")
+		if err != nil {
+			return nil, err
+		}
+		var bulk types.QueryResults
+		if err := json.Unmarshal(buff, &bulk); err != nil {
+			return nil, err
+		}
+		// Count is static given the query provided, it should
+		// never change once it has been updated the first time
+		count = int(bulk.Count)
+		for _, raw := range bulk.Results {
+			var det types.Detector
+			if err := json.Unmarshal(raw, &det); err != nil {
+				return nil, err
+			}
+			results = append(results, &det)
+		}
+	}
+	return results, nil
 }
 
 // GetDetectorByID retrives the provided detector as defined by https://developers.signalfx.com/detectors_reference.html#tag/Retrieve-Detector-ID
